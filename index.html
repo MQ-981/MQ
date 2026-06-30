@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>来料筛选周期管理系统</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      window.SCREENING_FORCE_LOCAL = true;
+    </script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">IQC</div>
+          <div>
+            <h1>来料筛选周期管理</h1>
+            <p>异常触发 · 全检 · 观察 · 关闭</p>
+          </div>
+        </div>
+        <nav class="nav" aria-label="主导航">
+          <button class="nav-item active" data-view="daily">筛选工作台</button>
+          <button class="nav-item" data-view="dashboard">看板</button>
+          <button class="nav-item" data-view="tasks">筛选项目管理</button>
+          <button class="nav-item" data-view="rules">周期规则</button>
+          <button class="nav-item" data-view="settings">数据</button>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Incoming Quality Control</p>
+            <h2 id="viewTitle">筛选工作台</h2>
+          </div>
+          <div class="toolbar">
+            <button class="button secondary" id="exportDataBtn">导出数据</button>
+            <button class="button primary" id="newTaskBtn">新建任务</button>
+          </div>
+        </header>
+
+        <section class="view active" id="dailyView">
+          <div class="section-band filter-band">
+            <div class="daily-toolbar">
+              <div class="field">
+                <label for="dailyDateInput">筛选日期</label>
+                <input id="dailyDateInput" type="date" />
+              </div>
+              <div class="daily-summary-strip">
+                <div>
+                  <span>当日项目</span>
+                  <strong id="dailyTaskCount">0</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-band">
+            <div class="section-heading">
+              <div>
+                <h3>日期筛选工作台</h3>
+                <p>选择任意日期后，系统会显示该日期需要执行的未关闭筛选项；超期项目会自动提示。</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>状态</th>
+                    <th>任务单号</th>
+                    <th>物料</th>
+                    <th>供应商</th>
+                    <th>筛选内容</th>
+                    <th>等级</th>
+                    <th>结束日期</th>
+                    <th>当日筛选数量</th>
+                    <th>当日不良数量</th>
+                    <th>当日不良率</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="dailyRows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="section-band daily-summary">
+            <div class="section-heading">
+              <div>
+                <h3>每日筛选汇总</h3>
+                <p>按筛选日期自动汇总当天筛选数量、不良数量和不良率。</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>日期</th>
+                    <th>筛选总数</th>
+                    <th>不良总数</th>
+                    <th>不良率</th>
+                    <th>涉及任务数</th>
+                    <th>涉及批次数</th>
+                  </tr>
+                </thead>
+                <tbody id="dailySummaryRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="dashboardView">
+          <div class="metric-grid">
+            <div class="metric">
+              <span>进行中任务</span>
+              <strong id="metricActive">0</strong>
+            </div>
+            <div class="metric">
+              <span>全检中</span>
+              <strong id="metricFullCheck">0</strong>
+            </div>
+            <div class="metric">
+              <span>观察中</span>
+              <strong id="metricObserve">0</strong>
+            </div>
+            <div class="metric alert">
+              <span>超期任务</span>
+              <strong id="metricOverdue">0</strong>
+            </div>
+            <div class="metric">
+              <span>当日筛选总项目</span>
+              <strong id="metricTodayTaskTotal">0</strong>
+            </div>
+            <div class="metric">
+              <span>当日筛选项目不良数</span>
+              <strong id="metricTodayTaskDefects">0</strong>
+            </div>
+            <div class="metric">
+              <span>今日项目不良率</span>
+              <strong id="metricTodayTaskRate">0%</strong>
+            </div>
+          </div>
+
+          <div class="section-band dashboard-search">
+            <div class="section-heading">
+              <div>
+                <h3>项目统计查询</h3>
+                <p>搜索某个筛选项目，查看总筛选时长、总筛选数量、总不良数量和总不良率。</p>
+              </div>
+            </div>
+            <div class="project-search-panel">
+              <div class="field">
+                <label for="dashboardProjectSearch">搜索项目</label>
+                <input id="dashboardProjectSearch" type="search" placeholder="任务单号 / 物料编码 / 供应商 / 筛选内容" />
+              </div>
+              <div id="projectSearchResults" class="project-results"></div>
+              <div id="projectStats" class="project-stats"></div>
+            </div>
+          </div>
+
+          <div class="section-band">
+            <div class="section-heading">
+              <div>
+                <h3>超期提醒</h3>
+                <p>这里只显示超过结束日期但尚未关闭的项目，完整项目清单请到“筛选项目管理”。</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>任务单号</th>
+                    <th>物料</th>
+                    <th>供应商</th>
+                    <th>等级</th>
+                    <th>阶段</th>
+                    <th>结束日期</th>
+                    <th>连续合格批次</th>
+                    <th>观察合格次数</th>
+                    <th>建议动作</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboardTaskRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="tasksView">
+            <div class="task-sections">
+            <div class="section-band filter-band">
+              <div class="filter-grid">
+                <div class="field">
+                  <label for="taskSearchInput">查找项目</label>
+                  <input id="taskSearchInput" type="search" placeholder="任务单号 / 物料 / 供应商 / 筛选内容" />
+                </div>
+                <div class="field">
+                  <label for="levelFilter">等级</label>
+                  <select id="levelFilter"></select>
+                </div>
+                <div class="field">
+                  <label for="stageFilter">阶段</label>
+                  <select id="stageFilter">
+                    <option value="">全部阶段</option>
+                    <option value="全检中">全检中</option>
+                    <option value="观察中">观察中</option>
+                    <option value="暂停">暂停</option>
+                    <option value="已关闭">已关闭</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="supplierFilter">供应商</label>
+                  <select id="supplierFilter"></select>
+                </div>
+                <div class="field">
+                  <label for="dateFromFilter">开始日期</label>
+                  <input id="dateFromFilter" type="date" />
+                </div>
+                <div class="field">
+                  <label for="dateToFilter">结束日期</label>
+                  <input id="dateToFilter" type="date" />
+                </div>
+                <div class="filter-actions">
+                  <button class="button secondary" id="clearFiltersBtn">清空筛选</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-band">
+              <div class="section-heading">
+                <div>
+                  <h3>正在筛选清单</h3>
+                  <p>未关闭的任务会保留在这里，便于跟踪全检、观察和暂停状态。</p>
+                </div>
+                <button class="button primary" id="taskAddBtn">新增任务</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>任务单号</th>
+                      <th>异常来源</th>
+                      <th>物料编码</th>
+                      <th>筛选内容</th>
+                      <th>等级</th>
+                      <th>阶段</th>
+                      <th>启动日期</th>
+                      <th>结束日期</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activeTaskRows"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="section-band">
+              <div class="section-heading">
+                <div>
+                  <h3>已关闭筛选清单</h3>
+                  <p>阶段为“已关闭”的任务会自动移动到这里。</p>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>任务单号</th>
+                      <th>异常来源</th>
+                      <th>物料编码</th>
+                      <th>筛选内容</th>
+                      <th>等级</th>
+                      <th>启动日期</th>
+                      <th>结束日期</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="closedTaskRows"></tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <section class="view" id="rulesView">
+          <div class="section-band">
+            <div class="section-heading">
+              <div>
+                <h3>筛选周期规则</h3>
+                <p>任务的结束日期会按这里的全检周期自动推算，仍可手动修改。</p>
+              </div>
+              <button class="button primary" id="ruleAddBtn">新增规则</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>等级</th>
+                    <th>风险描述</th>
+                    <th>典型问题</th>
+                    <th>全检周期</th>
+                    <th>筛选方式</th>
+                    <th>停止条件</th>
+                    <th>观察周期</th>
+                    <th>关闭条件</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="ruleRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="settingsView">
+          <div class="section-band">
+            <div class="section-heading">
+              <div>
+                <h3>数据管理</h3>
+                <p>支持 JSON 备份恢复，也支持从 Excel/CSV 批量导入任务和记录。</p>
+              </div>
+            </div>
+            <div class="data-actions">
+              <button class="button secondary" id="downloadBtn">下载 JSON</button>
+              <label class="button secondary file-button">
+                导入 JSON
+                <input id="importInput" type="file" accept="application/json" />
+              </label>
+              <label class="button secondary file-button">
+                导入任务 Excel/CSV
+                <input id="taskExcelInput" type="file" accept=".xlsx,.csv" />
+              </label>
+              <label class="button secondary file-button">
+                导入记录 Excel/CSV
+                <input id="recordExcelInput" type="file" accept=".xlsx,.csv" />
+              </label>
+              <button class="button secondary" id="taskTemplateBtn">下载任务模板</button>
+              <button class="button secondary" id="recordTemplateBtn">下载记录模板</button>
+              <button class="button warning" id="resetBtn">恢复示例数据</button>
+            </div>
+            <p class="import-hint">
+              任务导入建议表头：任务单号、异常来源、物料编码、物料名称、供应商、筛选内容、风险等级、启动日期、结束日期、当前阶段、责任人、备注。
+              记录导入建议表头：任务单号、来料批次、筛选阶段、筛选日期、筛选数量、不良数量、是否同类不良、判定结果、处理方式、检验员、不良现象。
+            </p>
+            <pre class="status-box" id="dataStatus"></pre>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="editorDialog">
+      <form method="dialog" class="dialog-content" id="editorForm">
+        <div class="dialog-header">
+          <h3 id="dialogTitle">编辑</h3>
+          <button class="icon-button" value="cancel" aria-label="关闭">×</button>
+        </div>
+        <div class="form-grid" id="formFields"></div>
+        <div class="dialog-actions">
+          <button class="button secondary" value="cancel">取消</button>
+          <button class="button primary" id="saveDialogBtn" value="default">保存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="detailDialog">
+      <div class="dialog-content">
+        <div class="dialog-header">
+          <h3 id="detailTitle">任务详情</h3>
+          <button class="icon-button" id="closeDetailBtn" aria-label="关闭">×</button>
+        </div>
+        <div id="detailBody" class="detail-body"></div>
+        <div class="dialog-actions">
+          <button class="button secondary" id="detailEditBtn">编辑任务</button>
+          <button class="button primary" id="detailCloseBtn">关闭</button>
+        </div>
+      </div>
+    </dialog>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
