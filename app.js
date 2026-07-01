@@ -97,7 +97,6 @@
         partNumber: "DIFF-HOUSING-001",
         partName: "Diff壳体",
         supplier: "示例供应商A",
-        grDate: today(),
         inspectionContent: "Q状态到货后核对外观磕碰和包装状态",
         ownerDepartment: "来料",
         status: "启用",
@@ -186,7 +185,6 @@
       ["partNumber", "零件号", "text"],
       ["partName", "物料名称", "text"],
       ["supplier", "供应商", "text"],
-      ["grDate", "GR日期", "date"],
       ["ownerDepartment", "责任部门", "text"],
       ["status", "状态", "select", "", ["启用", "关闭"]],
       ["inspectionContent", "检验内容", "textarea", "full"],
@@ -543,7 +541,7 @@
     const itemRows = state.incomingItems
       .map(incomingItemSummary)
       .filter((item) => incomingItemSearchText(item).includes(query))
-      .sort((a, b) => String(b.grDate).localeCompare(String(a.grDate)));
+      .sort((a, b) => String(b.sortDate).localeCompare(String(a.sortDate)));
     const pendingRows = itemRows.filter((item) => item.status !== "关闭" && item.pendingHuCount > 0);
     const doneRows = itemRows.filter((item) => item.huCount > 0 && item.pendingHuCount === 0);
 
@@ -554,20 +552,19 @@
 
     byId("incomingPendingRows").innerHTML = pendingRows.length
       ? pendingRows.map(incomingPendingRow).join("")
-      : `<tr><td colspan="8" class="empty">暂无待检HU。新增Q状态项目并填写HU后，未完成检验的项目会自动显示在这里。</td></tr>`;
+      : `<tr><td colspan="7" class="empty">暂无待检HU。新增Q状态项目并填写HU后，未完成检验的项目会自动显示在这里。</td></tr>`;
     byId("incomingItemRows").innerHTML = itemRows.length
       ? itemRows.map(incomingItemRow).join("")
-      : `<tr><td colspan="9" class="empty">暂无Q状态物料，点击“新增Q状态项目”开始。</td></tr>`;
+      : `<tr><td colspan="8" class="empty">暂无Q状态物料，点击“新增Q状态项目”开始。</td></tr>`;
     byId("incomingDoneRows").innerHTML = doneRows.length
       ? doneRows.map(incomingDoneRow).join("")
-      : `<tr><td colspan="7" class="empty">暂无已完成记录。</td></tr>`;
+      : `<tr><td colspan="6" class="empty">暂无已完成记录。</td></tr>`;
   }
 
   function incomingItemRow(item) {
     return `
       <tr class="${item.overdue ? "overdue-row" : ""}">
         <td>${incomingItemStatusBadge(item)}</td>
-        <td>${escapeHtml(item.grDate || "")}</td>
         <td>${escapeHtml(item.partNumber)}</td>
         <td>${escapeHtml(item.partName)}</td>
         <td>${escapeHtml(item.supplier)}</td>
@@ -583,7 +580,6 @@
     return `
       <tr class="${item.overdue ? "overdue-row" : ""}">
         <td>${incomingItemStatusBadge(item)}</td>
-        <td>${escapeHtml(item.grDate || "")}</td>
         <td>${escapeHtml(item.partNumber)}</td>
         <td>${escapeHtml(item.supplier)}</td>
         <td>${huProgressText(item)}</td>
@@ -597,7 +593,6 @@
   function incomingDoneRow(item) {
     return `
       <tr>
-        <td>${escapeHtml(item.grDate || "")}</td>
         <td>${escapeHtml(item.partNumber)}</td>
         <td>${escapeHtml(item.supplier || "")}</td>
         <td>${huProgressText(item)}</td>
@@ -613,15 +608,15 @@
     const huCount = batches.length;
     const doneHuCount = batches.filter((batch) => isHuDone(batch)).length;
     const pendingHuCount = Math.max(huCount - doneHuCount, huCount ? 0 : 1);
-    const grDate = normalizeDate(item.grDate) || earliestIncomingBatchDate(batches) || today();
+    const sortDate = latestIncomingBatchDate(batches) || "";
     return {
       ...item,
-      grDate,
+      sortDate,
       batches,
       huCount,
       doneHuCount,
       pendingHuCount,
-      overdue: item.status !== "关闭" && pendingHuCount > 0 && isIncomingOverdue(grDate),
+      overdue: item.status !== "关闭" && batches.some((batch) => !isHuDone(batch) && isIncomingOverdue(batch.arrivalDate)),
       hasIssue: batches.some((batch) => batch.result === "不合格"),
     };
   }
@@ -632,12 +627,11 @@
       item.partNumber,
       item.partName,
       item.supplier,
-      item.grDate,
       item.inspectionContent,
       item.ownerDepartment,
       item.status,
       item.note,
-      item.batches?.map((batch) => [batch.huNo, batch.result, batch.inspector].join(" ")).join(" "),
+      item.batches?.map((batch) => [batch.huNo, batch.arrivalDate, batch.result, batch.inspector].join(" ")).join(" "),
     ]
       .join(" ")
       .toLowerCase();
@@ -654,7 +648,7 @@
             (batch) => `
           <div class="hu-chip ${batch.result === "不合格" ? "fail" : ""}">
             <strong>${escapeHtml(batch.huNo || "未填写HU")}</strong>
-            <span>${formatNumber(batch.qty)} · ${escapeHtml(batch.result || "待检")}</span>
+            <span>${escapeHtml(normalizeDate(batch.arrivalDate) || "未填GR")} · ${formatNumber(batch.qty)} · ${escapeHtml(batch.result || "待检")}</span>
           </div>
         `,
           )
@@ -677,6 +671,11 @@
 
   function earliestIncomingBatchDate(batches) {
     return batches.map((batch) => normalizeDate(batch.arrivalDate)).filter(Boolean).sort()[0] || "";
+  }
+
+  function latestIncomingBatchDate(batches) {
+    const dates = batches.map((batch) => normalizeDate(batch.arrivalDate)).filter(Boolean).sort();
+    return dates[dates.length - 1] || "";
   }
 
   function isHuDone(batch) {
@@ -878,6 +877,7 @@
           {
             id: "",
             huNo: "",
+            arrivalDate: today(),
             qty: 0,
             result: "待检",
             inspector: "",
@@ -904,6 +904,10 @@
         <div class="field">
           <label>HU号</label>
           <input data-hu-field="huNo" type="text" value="${escapeAttr(batch.huNo || "")}" />
+        </div>
+        <div class="field">
+          <label>GR日期</label>
+          <input data-hu-field="arrivalDate" type="date" value="${escapeAttr(normalizeDate(batch.arrivalDate) || today())}" />
         </div>
         <div class="field">
           <label>数量</label>
@@ -953,6 +957,7 @@
     rows.forEach((row, index) => {
       const value = (name) => row.querySelector(`[data-hu-field='${name}']`)?.value?.trim() || "";
       const huNo = value("huNo");
+      const arrivalDate = normalizeDate(value("arrivalDate")) || today();
       const qty = toNumber(value("qty"));
       const result = normalizeInspectionResult(value("result")) || "待检";
       const inspector = value("inspector");
@@ -965,7 +970,7 @@
       nextBatches.push({
         id: row.dataset.id || `INSP-BATCH-${Date.now()}-${index}`,
         itemId: item.id,
-        arrivalDate: normalizeDate(item.grDate) || today(),
+        arrivalDate,
         huNo,
         qty,
         inspector,
@@ -1049,7 +1054,6 @@
         partNumber: "",
         partName: "",
         supplier: "",
-        grDate: today(),
         inspectionContent: "",
         ownerDepartment: "来料",
         status: "启用",
@@ -1478,20 +1482,23 @@
       sameIssue: normalizeYesNo(record.sameIssue) || "否",
       result: normalizeResult(record.result) || "合格",
     }));
-    clean.incomingBatches = (clean.incomingBatches || []).map((batch) => ({
-      ...batch,
-      arrivalDate: normalizeDate(batch.arrivalDate || batch.grDate) || today(),
+    const rawIncomingItems = clean.incomingItems || [];
+    clean.incomingBatches = (clean.incomingBatches || []).map((batch) => {
+      const sourceItem = rawIncomingItems.find((item) => item.id === batch.itemId);
+      return {
+        ...batch,
+        arrivalDate: normalizeDate(batch.arrivalDate || batch.grDate || sourceItem?.grDate || sourceItem?.arrivalDate) || today(),
       inspectionDate: normalizeDate(batch.inspectionDate),
       qty: toNumber(batch.qty),
       result: normalizeInspectionResult(batch.result) || "待检",
-    }));
-    clean.incomingItems = (clean.incomingItems || []).map((item) => {
+      };
+    });
+    clean.incomingItems = rawIncomingItems.map((item) => {
       const itemBatches = clean.incomingBatches.filter((batch) => batch.itemId === item.id);
       return {
         ...item,
         partNumber: item.partNumber || item.materialCode || "",
         partName: item.partName || item.materialName || "",
-        grDate: normalizeDate(item.grDate || item.arrivalDate) || earliestIncomingBatchDate(itemBatches) || today(),
         ownerDepartment: item.ownerDepartment || item.owner || "来料",
         status: item.status === "关闭" ? "关闭" : "启用",
         inspectionContent: item.inspectionContent || "",
