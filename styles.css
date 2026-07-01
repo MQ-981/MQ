@@ -431,6 +431,14 @@ tr.overdue-row:hover {
   background: #f8fafc;
 }
 
+.hu-defect-field {
+  display: none;
+}
+
+.hu-editor-row.fail .hu-defect-field {
+  display: block;
+}
+
 .hu-list {
   display: flex;
   flex-wrap: wrap;

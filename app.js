@@ -631,7 +631,7 @@
       item.ownerDepartment,
       item.status,
       item.note,
-      item.batches?.map((batch) => [batch.huNo, batch.arrivalDate, batch.result, batch.inspector].join(" ")).join(" "),
+      item.batches?.map((batch) => [batch.huNo, batch.arrivalDate, batch.result, batch.defectQty, batch.defectReason, batch.inspector].join(" ")).join(" "),
     ]
       .join(" ")
       .toLowerCase();
@@ -649,6 +649,7 @@
           <div class="hu-chip ${batch.result === "不合格" ? "fail" : ""}">
             <strong>${escapeHtml(batch.huNo || "未填写HU")}</strong>
             <span>${escapeHtml(normalizeDate(batch.arrivalDate) || "未填GR")} · ${formatNumber(batch.qty)} · ${escapeHtml(batch.result || "待检")}</span>
+            ${batch.result === "不合格" ? `<span>NG ${formatNumber(batch.defectQty)} ${escapeHtml(batch.defectReason || "")}</span>` : ""}
           </div>
         `,
           )
@@ -882,6 +883,8 @@
             result: "待检",
             inspector: "",
             inspectionDate: "",
+            defectQty: 0,
+            defectReason: "",
           },
         ];
     return `
@@ -899,8 +902,9 @@
 
   function huEditorRow(batch = {}) {
     const id = escapeAttr(batch.id || "");
+    const isFail = (batch.result || "") === "不合格";
     return `
-      <div class="hu-editor-row" data-id="${id}">
+      <div class="hu-editor-row ${isFail ? "fail" : ""}" data-id="${id}">
         <div class="field">
           <label>HU号</label>
           <input data-hu-field="huNo" type="text" value="${escapeAttr(batch.huNo || "")}" />
@@ -918,6 +922,14 @@
           <select data-hu-field="result">
             ${["待检", "合格", "不合格", "待判定"].map((value) => `<option value="${value}" ${value === (batch.result || "待检") ? "selected" : ""}>${value}</option>`).join("")}
           </select>
+        </div>
+        <div class="field hu-defect-field">
+          <label>不合格数量</label>
+          <input data-hu-field="defectQty" type="number" min="0" value="${escapeAttr(batch.defectQty || 0)}" />
+        </div>
+        <div class="field hu-defect-field">
+          <label>不合格原因</label>
+          <input data-hu-field="defectReason" type="text" value="${escapeAttr(batch.defectReason || "")}" />
         </div>
         <div class="field">
           <label>检验员</label>
@@ -944,10 +956,22 @@
         button.closest(".hu-editor-row").querySelectorAll("input").forEach((input) => {
           input.value = input.type === "number" ? "0" : "";
         });
-        button.closest(".hu-editor-row").querySelector("[data-hu-field='result']").value = "待检";
+        const row = button.closest(".hu-editor-row");
+        row.querySelector("[data-hu-field='result']").value = "待检";
+        row.classList.remove("fail");
         return;
       }
       button.closest(".hu-editor-row").remove();
+    });
+    byId("huEditorRows").addEventListener("change", (event) => {
+      const select = event.target.closest("[data-hu-field='result']");
+      if (!select) return;
+      const row = select.closest(".hu-editor-row");
+      row.classList.toggle("fail", select.value === "不合格");
+      if (select.value !== "不合格") {
+        row.querySelector("[data-hu-field='defectQty']").value = "0";
+        row.querySelector("[data-hu-field='defectReason']").value = "";
+      }
     });
   }
 
@@ -960,9 +984,11 @@
       const arrivalDate = normalizeDate(value("arrivalDate")) || today();
       const qty = toNumber(value("qty"));
       const result = normalizeInspectionResult(value("result")) || "待检";
+      const defectQty = result === "不合格" ? toNumber(value("defectQty")) : 0;
+      const defectReason = result === "不合格" ? value("defectReason") : "";
       const inspector = value("inspector");
       let inspectionDate = normalizeDate(value("inspectionDate"));
-      const hasContent = huNo || qty || inspector || inspectionDate || result !== "待检";
+      const hasContent = huNo || qty || defectQty || defectReason || inspector || inspectionDate || result !== "待检";
       if (!hasContent) return;
       if (result !== "待检" && !inspectionDate) {
         inspectionDate = today();
@@ -976,6 +1002,8 @@
         inspector,
         inspectionDate,
         result,
+        defectQty,
+        defectReason,
         action: result === "不合格" ? "冻结" : result === "合格" ? "放行" : "",
         note: "",
       });
@@ -1070,6 +1098,8 @@
         inspector: "",
         inspectionDate: "",
         result: "待检",
+        defectQty: 0,
+        defectReason: "",
         action: "",
         note: "",
       };
@@ -1488,9 +1518,11 @@
       return {
         ...batch,
         arrivalDate: normalizeDate(batch.arrivalDate || batch.grDate || sourceItem?.grDate || sourceItem?.arrivalDate) || today(),
-      inspectionDate: normalizeDate(batch.inspectionDate),
-      qty: toNumber(batch.qty),
-      result: normalizeInspectionResult(batch.result) || "待检",
+        inspectionDate: normalizeDate(batch.inspectionDate),
+        qty: toNumber(batch.qty),
+        defectQty: toNumber(batch.defectQty),
+        defectReason: batch.defectReason || "",
+        result: normalizeInspectionResult(batch.result) || "待检",
       };
     });
     clean.incomingItems = rawIncomingItems.map((item) => {
