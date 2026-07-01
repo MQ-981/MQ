@@ -229,7 +229,6 @@
       dailyDate = event.target.value || today();
       renderDaily();
     });
-    byId("newTaskBtn").addEventListener("click", () => openEditor("task"));
     byId("taskAddBtn").addEventListener("click", () => openEditor("task"));
     byId("ruleAddBtn").addEventListener("click", () => openEditor("rule"));
     byId("exportDataBtn").addEventListener("click", downloadJson);
