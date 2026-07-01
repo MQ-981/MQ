@@ -422,11 +422,12 @@ tr.overdue-row:hover {
 }
 
 .hu-editor-row {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) 34px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   align-items: end;
-  padding: 10px;
+  padding: 10px 46px 10px 10px;
   border: 1px solid var(--line);
   background: #f8fafc;
 }
@@ -440,9 +441,9 @@ tr.overdue-row:hover {
 }
 
 .hu-remove-btn {
-  grid-column: 3;
-  grid-row: 1;
-  align-self: start;
+  position: absolute;
+  top: 8px;
+  right: 8px;
 }
 
 .hu-list {
@@ -732,11 +733,6 @@ dialog::backdrop {
 
   .hu-editor-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .hu-remove-btn {
-    grid-column: auto;
-    grid-row: auto;
   }
 
   .form-grid {
