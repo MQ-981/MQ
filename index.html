@@ -292,7 +292,7 @@
               <strong id="incomingMetricItems">0</strong>
             </div>
             <div class="metric">
-              <span>待检HU批次</span>
+              <span>待检项目</span>
               <strong id="incomingMetricPending">0</strong>
             </div>
             <div class="metric alert">
@@ -300,7 +300,7 @@
               <strong id="incomingMetricOverdue">0</strong>
             </div>
             <div class="metric">
-              <span>已检批次</span>
+              <span>已完成项目</span>
               <strong id="incomingMetricDone">0</strong>
             </div>
           </div>
@@ -313,7 +313,6 @@
               </div>
               <div class="filter-actions">
                 <button class="button primary" id="incomingItemAddBtn">新增Q状态项目</button>
-                <button class="button secondary" id="incomingBatchAddBtn">记录到货HU</button>
               </div>
             </div>
           </div>
@@ -322,7 +321,7 @@
             <div class="section-heading">
               <div>
                 <h3>待检提醒</h3>
-                <p>已记录到货HU但尚未填写检验结果的批次会留在这里；超过到货日仍未完成会提示超期。</p>
+                <p>Q状态项目下仍有HU未检时会留在这里；GR日期后第2日仍未完成会自动标红。</p>
               </div>
             </div>
             <div class="table-wrap">
@@ -330,11 +329,11 @@
                 <thead>
                   <tr>
                     <th>状态</th>
-                    <th>到货日期</th>
-                    <th>HU号</th>
+                    <th>GR日期</th>
                     <th>零件号</th>
                     <th>供应商</th>
-                    <th>数量</th>
+                    <th>HU进度</th>
+                    <th>HU明细</th>
                     <th>检验内容</th>
                     <th>操作</th>
                   </tr>
@@ -348,7 +347,7 @@
             <div class="section-heading">
               <div>
                 <h3>Q状态物料清单</h3>
-                <p>维护需要进料检验的Q状态物料，后续每批到货时记录HU号并完成检验。</p>
+                <p>维护需要进料检验的Q状态物料，并在同一条记录下添加多个HU。</p>
               </div>
             </div>
             <div class="table-wrap">
@@ -356,9 +355,11 @@
                 <thead>
                   <tr>
                     <th>状态</th>
+                    <th>GR日期</th>
                     <th>零件号</th>
                     <th>物料名称</th>
                     <th>供应商</th>
+                    <th>HU进度</th>
                     <th>检验内容</th>
                     <th>责任部门</th>
                     <th>操作</th>
@@ -372,21 +373,20 @@
           <div class="section-band">
             <div class="section-heading">
               <div>
-                <h3>已检记录</h3>
-                <p>已填写检验结果的HU批次会自动进入这里，便于追溯每批进料检验情况。</p>
+                <h3>已完成清单</h3>
+                <p>所有HU都完成检验后，整条Q状态项目会自动进入这里，便于追溯每批进料检验情况。</p>
               </div>
             </div>
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>检验日期</th>
-                    <th>HU号</th>
+                    <th>GR日期</th>
                     <th>零件号</th>
                     <th>供应商</th>
-                    <th>数量</th>
-                    <th>结果</th>
-                    <th>检验员</th>
+                    <th>HU进度</th>
+                    <th>HU明细</th>
+                    <th>检验内容</th>
                     <th>操作</th>
                   </tr>
                 </thead>

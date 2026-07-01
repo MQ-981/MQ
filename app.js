@@ -97,6 +97,7 @@
         partNumber: "DIFF-HOUSING-001",
         partName: "Diff壳体",
         supplier: "示例供应商A",
+        grDate: today(),
         inspectionContent: "Q状态到货后核对外观磕碰和包装状态",
         ownerDepartment: "来料",
         status: "启用",
@@ -187,6 +188,7 @@
       ["partNumber", "零件号", "text"],
       ["partName", "物料名称", "text"],
       ["supplier", "供应商", "text"],
+      ["grDate", "GR日期", "date"],
       ["ownerDepartment", "责任部门", "text"],
       ["status", "状态", "select", "", ["启用", "关闭"]],
       ["inspectionContent", "检验内容", "textarea", "full"],
@@ -194,7 +196,7 @@
     ],
     incomingBatch: [
       ["itemId", "Q状态项目", "select", "", () => state.incomingItems.map((item) => [item.id, `${item.partNumber} · ${item.supplier}`])],
-      ["arrivalDate", "到货日期", "date"],
+      ["arrivalDate", "GR日期", "date"],
       ["huNo", "HU号", "textarea", "full"],
       ["qty", "到货数量", "number"],
       ["location", "仓库/库位", "text"],
@@ -245,7 +247,6 @@
     byId("taskTemplateBtn").addEventListener("click", () => downloadTemplate("task"));
     byId("recordTemplateBtn").addEventListener("click", () => downloadTemplate("record"));
     byId("incomingItemAddBtn").addEventListener("click", () => openEditor("incomingItem"));
-    byId("incomingBatchAddBtn").addEventListener("click", () => openEditor("incomingBatch"));
     byId("incomingSearchInput").addEventListener("input", renderIncomingInspection);
     byId("clearFiltersBtn").addEventListener("click", clearFilters);
     byId("taskSearchInput").addEventListener("input", (event) => updateFilter("search", event.target.value));
@@ -543,37 +544,38 @@
 
   function renderIncomingInspection() {
     const query = (byId("incomingSearchInput")?.value || "").trim().toLowerCase();
-    const itemRows = state.incomingItems.filter((item) => incomingItemSearchText(item).includes(query));
-    const batchRows = state.incomingBatches
-      .map(incomingBatchSummary)
-      .filter((batch) => incomingBatchSearchText(batch).includes(query))
-      .sort((a, b) => String(b.arrivalDate).localeCompare(String(a.arrivalDate)));
-    const pendingRows = batchRows.filter((batch) => batch.pending);
-    const doneRows = batchRows.filter((batch) => !batch.pending);
+    const itemRows = state.incomingItems
+      .map(incomingItemSummary)
+      .filter((item) => incomingItemSearchText(item).includes(query))
+      .sort((a, b) => String(b.grDate).localeCompare(String(a.grDate)));
+    const pendingRows = itemRows.filter((item) => item.status !== "关闭" && item.pendingHuCount > 0);
+    const doneRows = itemRows.filter((item) => item.huCount > 0 && item.pendingHuCount === 0);
 
     byId("incomingMetricItems").textContent = formatNumber(state.incomingItems.filter((item) => item.status !== "关闭").length);
     byId("incomingMetricPending").textContent = formatNumber(pendingRows.length);
-    byId("incomingMetricOverdue").textContent = formatNumber(pendingRows.filter((batch) => batch.overdue).length);
+    byId("incomingMetricOverdue").textContent = formatNumber(pendingRows.filter((item) => item.overdue).length);
     byId("incomingMetricDone").textContent = formatNumber(doneRows.length);
 
     byId("incomingPendingRows").innerHTML = pendingRows.length
       ? pendingRows.map(incomingPendingRow).join("")
-      : `<tr><td colspan="8" class="empty">暂无待检HU。记录到货HU后，未完成检验的批次会自动显示在这里。</td></tr>`;
+      : `<tr><td colspan="8" class="empty">暂无待检HU。新增Q状态项目并填写HU后，未完成检验的项目会自动显示在这里。</td></tr>`;
     byId("incomingItemRows").innerHTML = itemRows.length
       ? itemRows.map(incomingItemRow).join("")
-      : `<tr><td colspan="7" class="empty">暂无Q状态物料，点击“新增Q状态项目”开始。</td></tr>`;
+      : `<tr><td colspan="9" class="empty">暂无Q状态物料，点击“新增Q状态项目”开始。</td></tr>`;
     byId("incomingDoneRows").innerHTML = doneRows.length
       ? doneRows.map(incomingDoneRow).join("")
-      : `<tr><td colspan="8" class="empty">暂无已检记录。</td></tr>`;
+      : `<tr><td colspan="7" class="empty">暂无已完成记录。</td></tr>`;
   }
 
   function incomingItemRow(item) {
     return `
-      <tr>
-        <td>${badgeText(item.status || "启用", item.status === "关闭" ? "closed" : "observe")}</td>
+      <tr class="${item.overdue ? "overdue-row" : ""}">
+        <td>${incomingItemStatusBadge(item)}</td>
+        <td>${escapeHtml(item.grDate || "")}</td>
         <td>${escapeHtml(item.partNumber)}</td>
         <td>${escapeHtml(item.partName)}</td>
         <td>${escapeHtml(item.supplier)}</td>
+        <td>${huProgressText(item)}</td>
         <td>${escapeHtml(item.inspectionContent || "")}</td>
         <td>${escapeHtml(item.ownerDepartment || "")}</td>
         <td>${rowActions("incomingItem", item.id)}</td>
@@ -581,73 +583,113 @@
     `;
   }
 
-  function incomingPendingRow(batch) {
+  function incomingPendingRow(item) {
     return `
-      <tr class="${batch.overdue ? "overdue-row" : ""}">
-        <td>${badgeText(batch.overdue ? "超期未检" : "待检", batch.overdue ? "overdue" : "paused")}</td>
-        <td>${escapeHtml(batch.arrivalDate)}</td>
-        <td>${formatHu(batch.huNo)}</td>
-        <td>${escapeHtml(batch.item?.partNumber || "未匹配")}</td>
-        <td>${escapeHtml(batch.item?.supplier || "")}</td>
-        <td>${formatNumber(batch.qty)}</td>
-        <td>${escapeHtml(batch.item?.inspectionContent || "")}</td>
-        <td>${rowActions("incomingBatch", batch.id)}</td>
+      <tr class="${item.overdue ? "overdue-row" : ""}">
+        <td>${incomingItemStatusBadge(item)}</td>
+        <td>${escapeHtml(item.grDate || "")}</td>
+        <td>${escapeHtml(item.partNumber)}</td>
+        <td>${escapeHtml(item.supplier)}</td>
+        <td>${huProgressText(item)}</td>
+        <td>${huDetailList(item.batches)}</td>
+        <td>${escapeHtml(item.inspectionContent || "")}</td>
+        <td>${rowActions("incomingItem", item.id)}</td>
       </tr>
     `;
   }
 
-  function incomingDoneRow(batch) {
+  function incomingDoneRow(item) {
     return `
       <tr>
-        <td>${escapeHtml(batch.inspectionDate || batch.arrivalDate)}</td>
-        <td>${formatHu(batch.huNo)}</td>
-        <td>${escapeHtml(batch.item?.partNumber || "未匹配")}</td>
-        <td>${escapeHtml(batch.item?.supplier || "")}</td>
-        <td>${formatNumber(batch.qty)}</td>
-        <td>${resultBadge(batch.result)}</td>
-        <td>${escapeHtml(batch.inspector || "")}</td>
-        <td>${rowActions("incomingBatch", batch.id)}</td>
+        <td>${escapeHtml(item.grDate || "")}</td>
+        <td>${escapeHtml(item.partNumber)}</td>
+        <td>${escapeHtml(item.supplier || "")}</td>
+        <td>${huProgressText(item)}</td>
+        <td>${huDetailList(item.batches)}</td>
+        <td>${escapeHtml(item.inspectionContent || "")}</td>
+        <td>${rowActions("incomingItem", item.id)}</td>
       </tr>
     `;
   }
 
-  function incomingBatchSummary(batch) {
-    const item = state.incomingItems.find((entry) => entry.id === batch.itemId);
-    const pending = !batch.result || batch.result === "待检";
+  function incomingItemSummary(item) {
+    const batches = state.incomingBatches.filter((batch) => batch.itemId === item.id);
+    const huCount = batches.length;
+    const doneHuCount = batches.filter((batch) => isHuDone(batch)).length;
+    const pendingHuCount = Math.max(huCount - doneHuCount, huCount ? 0 : 1);
+    const grDate = normalizeDate(item.grDate) || earliestIncomingBatchDate(batches) || today();
     return {
-      ...batch,
-      item,
-      pending,
-      overdue: pending && normalizeDate(batch.arrivalDate) < today(),
+      ...item,
+      grDate,
+      batches,
+      huCount,
+      doneHuCount,
+      pendingHuCount,
+      overdue: item.status !== "关闭" && pendingHuCount > 0 && isIncomingOverdue(grDate),
+      hasIssue: batches.some((batch) => batch.result === "不合格"),
     };
   }
 
   function incomingItemSearchText(item) {
-    return [item.id, item.partNumber, item.partName, item.supplier, item.inspectionContent, item.ownerDepartment, item.status, item.note]
-      .join(" ")
-      .toLowerCase();
-  }
-
-  function incomingBatchSearchText(batch) {
     return [
-      batch.id,
-      batch.huNo,
-      batch.arrivalDate,
-      batch.location,
-      batch.inspector,
-      batch.result,
-      batch.defectDesc,
-      batch.item?.partNumber,
-      batch.item?.partName,
-      batch.item?.supplier,
-      batch.item?.inspectionContent,
+      item.id,
+      item.partNumber,
+      item.partName,
+      item.supplier,
+      item.grDate,
+      item.inspectionContent,
+      item.ownerDepartment,
+      item.status,
+      item.note,
+      item.batches?.map((batch) => [batch.huNo, batch.result, batch.inspector, batch.location, batch.defectDesc].join(" ")).join(" "),
     ]
       .join(" ")
       .toLowerCase();
   }
 
-  function formatHu(value) {
-    return escapeHtml(String(value || "").split(/[\n,，]+/).map((item) => item.trim()).filter(Boolean).join(" / "));
+  function huDetailList(batches) {
+    if (!batches.length) {
+      return `<span class="muted">未填写HU</span>`;
+    }
+    return `
+      <div class="hu-list">
+        ${batches
+          .map(
+            (batch) => `
+          <div class="hu-chip ${batch.result === "不合格" ? "fail" : ""}">
+            <strong>${escapeHtml(batch.huNo || "未填写HU")}</strong>
+            <span>${formatNumber(batch.qty)} · ${escapeHtml(batch.result || "待检")}</span>
+          </div>
+        `,
+          )
+          .join("")}
+      </div>
+    `;
+  }
+
+  function huProgressText(item) {
+    return item.huCount ? `${escapeHtml(item.doneHuCount)}/${escapeHtml(item.huCount)} 已检` : `<span class="muted">未填HU</span>`;
+  }
+
+  function incomingItemStatusBadge(item) {
+    if (item.status === "关闭") return badgeText("关闭", "closed");
+    if (item.overdue) return badgeText("超期未检", "overdue");
+    if (item.hasIssue) return badgeText("有异常", "fail");
+    if (item.pendingHuCount > 0) return badgeText("待检", "paused");
+    return badgeText("已完成", "pass");
+  }
+
+  function earliestIncomingBatchDate(batches) {
+    return batches.map((batch) => normalizeDate(batch.arrivalDate)).filter(Boolean).sort()[0] || "";
+  }
+
+  function isHuDone(batch) {
+    return Boolean(batch.result && batch.result !== "待检");
+  }
+
+  function isIncomingOverdue(grDate) {
+    const deadline = addCalendarDays(grDate, 2);
+    return Boolean(deadline && today() >= deadline);
   }
 
   function taskRow(task, includeStage) {
@@ -764,6 +806,10 @@
     if (type === "task") {
       bindTaskDateAutofill();
     }
+    if (type === "incomingItem") {
+      byId("formFields").insertAdjacentHTML("beforeend", renderHuEditor(item));
+      bindHuEditor();
+    }
     dialog.showModal();
   }
 
@@ -828,6 +874,128 @@
     `;
   }
 
+  function renderHuEditor(item) {
+    const batches = state.incomingBatches.filter((batch) => batch.itemId === item.id);
+    const rows = batches.length
+      ? batches
+      : [
+          {
+            id: "",
+            huNo: "",
+            qty: 0,
+            location: "",
+            result: "待检",
+            inspector: "",
+            inspectionDate: "",
+            defectDesc: "",
+          },
+        ];
+    return `
+      <div class="field full hu-editor">
+        <div class="hu-editor-header">
+          <label>HU明细</label>
+          <button class="button secondary compact" id="addHuRowBtn" type="button">＋</button>
+        </div>
+        <div class="hu-editor-rows" id="huEditorRows">
+          ${rows.map(huEditorRow).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function huEditorRow(batch = {}) {
+    const id = escapeAttr(batch.id || "");
+    return `
+      <div class="hu-editor-row" data-id="${id}">
+        <div class="field">
+          <label>HU号</label>
+          <input data-hu-field="huNo" type="text" value="${escapeAttr(batch.huNo || "")}" />
+        </div>
+        <div class="field">
+          <label>数量</label>
+          <input data-hu-field="qty" type="number" min="0" value="${escapeAttr(batch.qty || 0)}" />
+        </div>
+        <div class="field">
+          <label>库位</label>
+          <input data-hu-field="location" type="text" value="${escapeAttr(batch.location || "")}" />
+        </div>
+        <div class="field">
+          <label>结果</label>
+          <select data-hu-field="result">
+            ${["待检", "合格", "不合格", "待判定"].map((value) => `<option value="${value}" ${value === (batch.result || "待检") ? "selected" : ""}>${value}</option>`).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <label>检验员</label>
+          <input data-hu-field="inspector" type="text" value="${escapeAttr(batch.inspector || "")}" />
+        </div>
+        <div class="field">
+          <label>检验日期</label>
+          <input data-hu-field="inspectionDate" type="date" value="${escapeAttr(batch.inspectionDate || "")}" />
+        </div>
+        <div class="field">
+          <label>异常说明</label>
+          <input data-hu-field="defectDesc" type="text" value="${escapeAttr(batch.defectDesc || "")}" />
+        </div>
+        <button class="icon-button hu-remove-btn" type="button" aria-label="删除HU">×</button>
+      </div>
+    `;
+  }
+
+  function bindHuEditor() {
+    byId("addHuRowBtn").addEventListener("click", () => {
+      byId("huEditorRows").insertAdjacentHTML("beforeend", huEditorRow());
+    });
+    byId("huEditorRows").addEventListener("click", (event) => {
+      const button = event.target.closest(".hu-remove-btn");
+      if (!button) return;
+      const rows = Array.from(document.querySelectorAll(".hu-editor-row"));
+      if (rows.length <= 1) {
+        button.closest(".hu-editor-row").querySelectorAll("input").forEach((input) => {
+          input.value = input.type === "number" ? "0" : "";
+        });
+        button.closest(".hu-editor-row").querySelector("[data-hu-field='result']").value = "待检";
+        return;
+      }
+      button.closest(".hu-editor-row").remove();
+    });
+  }
+
+  function saveIncomingHuRows(item) {
+    const rows = Array.from(document.querySelectorAll(".hu-editor-row"));
+    const nextBatches = [];
+    rows.forEach((row, index) => {
+      const value = (name) => row.querySelector(`[data-hu-field='${name}']`)?.value?.trim() || "";
+      const huNo = value("huNo");
+      const qty = toNumber(value("qty"));
+      const location = value("location");
+      const result = normalizeInspectionResult(value("result")) || "待检";
+      const inspector = value("inspector");
+      let inspectionDate = normalizeDate(value("inspectionDate"));
+      const defectDesc = value("defectDesc");
+      const hasContent = huNo || qty || location || inspector || inspectionDate || defectDesc || result !== "待检";
+      if (!hasContent) return;
+      if (result !== "待检" && !inspectionDate) {
+        inspectionDate = today();
+      }
+      nextBatches.push({
+        id: row.dataset.id || `INSP-BATCH-${Date.now()}-${index}`,
+        itemId: item.id,
+        arrivalDate: normalizeDate(item.grDate) || today(),
+        huNo,
+        qty,
+        location,
+        inspector,
+        inspectionDate,
+        result,
+        defectDesc,
+        action: result === "不合格" ? "冻结" : result === "合格" ? "放行" : "",
+        note: "",
+      });
+    });
+    state.incomingBatches = state.incomingBatches.filter((batch) => batch.itemId !== item.id).concat(nextBatches);
+  }
+
   function saveEditor(event) {
     event.preventDefault();
     const formData = new FormData(byId("editorForm"));
@@ -853,6 +1021,9 @@
     }
     if (editing.type === "incomingBatch" && item.result && item.result !== "待检" && !item.inspectionDate) {
       item.inspectionDate = today();
+    }
+    if (editing.type === "incomingItem") {
+      saveIncomingHuRows(item);
     }
 
     saveState();
@@ -896,6 +1067,7 @@
         partNumber: "",
         partName: "",
         supplier: "",
+        grDate: today(),
         inspectionContent: "",
         ownerDepartment: "来料",
         status: "启用",
@@ -1294,6 +1466,13 @@
     return toDateInputValue(date);
   }
 
+  function addCalendarDays(dateText, days) {
+    const date = parseDate(dateText);
+    if (!date) return "";
+    date.setDate(date.getDate() + Number(days || 0));
+    return toDateInputValue(date);
+  }
+
   function normalizeState(input) {
     const clean = input && Array.isArray(input.rules) ? input : JSON.parse(JSON.stringify(defaultState));
     clean.rules = clean.rules?.length ? clean.rules : JSON.parse(JSON.stringify(defaultRules));
@@ -1319,21 +1498,25 @@
       sameIssue: normalizeYesNo(record.sameIssue) || "否",
       result: normalizeResult(record.result) || "合格",
     }));
-    clean.incomingItems = (clean.incomingItems || []).map((item) => ({
-      ...item,
-      partNumber: item.partNumber || item.materialCode || "",
-      partName: item.partName || item.materialName || "",
-      ownerDepartment: item.ownerDepartment || item.owner || "来料",
-      status: item.status === "关闭" ? "关闭" : "启用",
-      inspectionContent: item.inspectionContent || "",
-    }));
     clean.incomingBatches = (clean.incomingBatches || []).map((batch) => ({
       ...batch,
-      arrivalDate: normalizeDate(batch.arrivalDate) || today(),
+      arrivalDate: normalizeDate(batch.arrivalDate || batch.grDate) || today(),
       inspectionDate: normalizeDate(batch.inspectionDate),
       qty: toNumber(batch.qty),
       result: normalizeInspectionResult(batch.result) || "待检",
     }));
+    clean.incomingItems = (clean.incomingItems || []).map((item) => {
+      const itemBatches = clean.incomingBatches.filter((batch) => batch.itemId === item.id);
+      return {
+        ...item,
+        partNumber: item.partNumber || item.materialCode || "",
+        partName: item.partName || item.materialName || "",
+        grDate: normalizeDate(item.grDate || item.arrivalDate) || earliestIncomingBatchDate(itemBatches) || today(),
+        ownerDepartment: item.ownerDepartment || item.owner || "来料",
+        status: item.status === "关闭" ? "关闭" : "启用",
+        inspectionContent: item.inspectionContent || "",
+      };
+    });
     return clean;
   }
 

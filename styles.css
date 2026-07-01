@@ -399,6 +399,60 @@ tr.overdue-row:hover {
   white-space: nowrap;
 }
 
+.hu-editor {
+  display: grid;
+  gap: 12px;
+}
+
+.hu-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.button.compact {
+  min-height: 34px;
+  padding: 6px 12px;
+}
+
+.hu-editor-rows {
+  display: grid;
+  gap: 10px;
+}
+
+.hu-editor-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.4fr) 90px minmax(100px, 1fr) minmax(100px, 1fr) minmax(100px, 1fr) 140px minmax(140px, 1.4fr) 34px;
+  gap: 8px;
+  align-items: end;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: #f8fafc;
+}
+
+.hu-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hu-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  font-size: 12px;
+}
+
+.hu-chip.fail {
+  border-color: #fecaca;
+  background: var(--red-soft);
+  color: var(--red);
+}
+
 .text-button {
   border: 0;
   background: transparent;
@@ -656,6 +710,10 @@ dialog::backdrop {
 
   .filter-actions {
     min-height: 0;
+  }
+
+  .hu-editor-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .form-grid {
