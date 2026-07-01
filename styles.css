@@ -401,7 +401,7 @@ tr.overdue-row:hover {
 
 .hu-editor {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .hu-editor-header {
@@ -423,7 +423,7 @@ tr.overdue-row:hover {
 
 .hu-editor-row {
   display: grid;
-  grid-template-columns: minmax(140px, 1.5fr) 140px 90px minmax(110px, 1fr) minmax(110px, 1fr) 140px 34px;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) 34px;
   gap: 8px;
   align-items: end;
   padding: 10px;
@@ -431,12 +431,18 @@ tr.overdue-row:hover {
   background: #f8fafc;
 }
 
-.hu-defect-field {
+.hu-editor-row .hu-defect-field {
   display: none;
 }
 
 .hu-editor-row.fail .hu-defect-field {
-  display: block;
+  display: grid;
+}
+
+.hu-remove-btn {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: start;
 }
 
 .hu-list {
@@ -481,7 +487,7 @@ tr.overdue-row:hover {
 }
 
 dialog {
-  width: min(860px, calc(100vw - 32px));
+  width: min(980px, calc(100vw - 32px));
   border: 0;
   border-radius: 8px;
   padding: 0;
@@ -500,7 +506,7 @@ dialog::backdrop {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 18px 20px;
+  padding: 12px 18px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -522,13 +528,13 @@ dialog::backdrop {
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  padding: 20px;
+  gap: 10px 14px;
+  padding: 16px 18px;
 }
 
 .field {
   display: grid;
-  gap: 7px;
+  gap: 5px;
 }
 
 .field.full {
@@ -547,14 +553,18 @@ dialog::backdrop {
   width: 100%;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
-  padding: 10px 11px;
+  padding: 8px 10px;
   background: #ffffff;
   color: var(--ink);
 }
 
 .field textarea {
-  min-height: 76px;
+  min-height: 64px;
   resize: vertical;
+}
+
+.field textarea#note {
+  min-height: 42px;
 }
 
 .dialog-actions {
@@ -722,6 +732,11 @@ dialog::backdrop {
 
   .hu-editor-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hu-remove-btn {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .form-grid {

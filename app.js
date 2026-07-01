@@ -798,12 +798,14 @@
     }
     editing = { type, id: item.id };
     byId("dialogTitle").textContent = `${id ? "编辑" : "新增"}${typeName(type)}`;
-    byId("formFields").innerHTML = fields[type].map((field) => renderField(field, item)).join("");
+    const editorFields = type === "incomingItem" ? fields[type].filter(([name]) => name !== "note") : fields[type];
+    byId("formFields").innerHTML = editorFields.map((field) => renderField(field, item)).join("");
     if (type === "task") {
       bindTaskDateAutofill();
     }
     if (type === "incomingItem") {
       byId("formFields").insertAdjacentHTML("beforeend", renderHuEditor(item));
+      byId("formFields").insertAdjacentHTML("beforeend", renderField(fields[type].find(([name]) => name === "note"), item));
       bindHuEditor();
     }
     dialog.showModal();
@@ -932,12 +934,12 @@
           <input data-hu-field="defectReason" type="text" value="${escapeAttr(batch.defectReason || "")}" />
         </div>
         <div class="field">
-          <label>检验员</label>
-          <input data-hu-field="inspector" type="text" value="${escapeAttr(batch.inspector || "")}" />
-        </div>
-        <div class="field">
           <label>检验日期</label>
           <input data-hu-field="inspectionDate" type="date" value="${escapeAttr(batch.inspectionDate || "")}" />
+        </div>
+        <div class="field">
+          <label>检验员</label>
+          <input data-hu-field="inspector" type="text" value="${escapeAttr(batch.inspector || "")}" />
         </div>
         <button class="icon-button hu-remove-btn" type="button" aria-label="删除HU">×</button>
       </div>
