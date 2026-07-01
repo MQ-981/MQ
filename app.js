@@ -111,11 +111,9 @@
         arrivalDate: today(),
         huNo: "HU-0001",
         qty: 120,
-        location: "待检区",
         inspector: "",
         inspectionDate: "",
         result: "待检",
-        defectDesc: "",
         action: "",
         note: "",
       },
@@ -199,12 +197,10 @@
       ["arrivalDate", "GR日期", "date"],
       ["huNo", "HU号", "textarea", "full"],
       ["qty", "到货数量", "number"],
-      ["location", "仓库/库位", "text"],
       ["inspector", "检验员", "text"],
       ["inspectionDate", "检验日期", "date"],
       ["result", "检验结果", "select", "", ["待检", "合格", "不合格", "待判定"]],
       ["action", "处理方式", "select", "", ["", "放行", "冻结", "退货", "特采", "待判定"]],
-      ["defectDesc", "异常说明", "textarea", "full"],
       ["note", "备注", "textarea", "full"],
     ],
   };
@@ -641,7 +637,7 @@
       item.ownerDepartment,
       item.status,
       item.note,
-      item.batches?.map((batch) => [batch.huNo, batch.result, batch.inspector, batch.location, batch.defectDesc].join(" ")).join(" "),
+      item.batches?.map((batch) => [batch.huNo, batch.result, batch.inspector].join(" ")).join(" "),
     ]
       .join(" ")
       .toLowerCase();
@@ -883,11 +879,9 @@
             id: "",
             huNo: "",
             qty: 0,
-            location: "",
             result: "待检",
             inspector: "",
             inspectionDate: "",
-            defectDesc: "",
           },
         ];
     return `
@@ -916,10 +910,6 @@
           <input data-hu-field="qty" type="number" min="0" value="${escapeAttr(batch.qty || 0)}" />
         </div>
         <div class="field">
-          <label>库位</label>
-          <input data-hu-field="location" type="text" value="${escapeAttr(batch.location || "")}" />
-        </div>
-        <div class="field">
           <label>结果</label>
           <select data-hu-field="result">
             ${["待检", "合格", "不合格", "待判定"].map((value) => `<option value="${value}" ${value === (batch.result || "待检") ? "selected" : ""}>${value}</option>`).join("")}
@@ -932,10 +922,6 @@
         <div class="field">
           <label>检验日期</label>
           <input data-hu-field="inspectionDate" type="date" value="${escapeAttr(batch.inspectionDate || "")}" />
-        </div>
-        <div class="field">
-          <label>异常说明</label>
-          <input data-hu-field="defectDesc" type="text" value="${escapeAttr(batch.defectDesc || "")}" />
         </div>
         <button class="icon-button hu-remove-btn" type="button" aria-label="删除HU">×</button>
       </div>
@@ -968,12 +954,10 @@
       const value = (name) => row.querySelector(`[data-hu-field='${name}']`)?.value?.trim() || "";
       const huNo = value("huNo");
       const qty = toNumber(value("qty"));
-      const location = value("location");
       const result = normalizeInspectionResult(value("result")) || "待检";
       const inspector = value("inspector");
       let inspectionDate = normalizeDate(value("inspectionDate"));
-      const defectDesc = value("defectDesc");
-      const hasContent = huNo || qty || location || inspector || inspectionDate || defectDesc || result !== "待检";
+      const hasContent = huNo || qty || inspector || inspectionDate || result !== "待检";
       if (!hasContent) return;
       if (result !== "待检" && !inspectionDate) {
         inspectionDate = today();
@@ -984,11 +968,9 @@
         arrivalDate: normalizeDate(item.grDate) || today(),
         huNo,
         qty,
-        location,
         inspector,
         inspectionDate,
         result,
-        defectDesc,
         action: result === "不合格" ? "冻结" : result === "合格" ? "放行" : "",
         note: "",
       });
@@ -1081,11 +1063,9 @@
         arrivalDate: today(),
         huNo: "",
         qty: 0,
-        location: "",
         inspector: "",
         inspectionDate: "",
         result: "待检",
-        defectDesc: "",
         action: "",
         note: "",
       };
