@@ -16,7 +16,7 @@
       risk: "有流到下一车间的风险，产线无法有效探测",
       typical: "可靠性缺陷、探测手段缺失的问题",
       cycle: "持续至断点",
-      method: "IQC 100%全检",
+      method: "来料 100%全检",
       stopCondition: "供应商长期措施验证 + 明确断点 + 7天内跟踪",
       observeCycle: "断点确认后按7天跟踪",
       closeCondition: "断点有效 + 7天内无再次发生 + QE确认",
@@ -27,7 +27,7 @@
       risk: "供应商技术问题导致的偏差，装配时可发现",
       typical: "尺寸不良、配合问题",
       cycle: "7个工作日",
-      method: "IQC 100%全检，产线辅助",
+      method: "来料 100%全检，产线辅助",
       stopCondition: "7天内无再次发生 + 连续3批次合格",
       observeCycle: "每7个工作日抽检1次",
       closeCondition: "连续3次观察抽检合格",
@@ -38,7 +38,7 @@
       risk: "供应商技术问题导致的外观偏差",
       typical: "多肉、加工残留、轻微外观缺陷",
       cycle: "3个工作日",
-      method: "IQC 100%全检，产线辅助",
+      method: "来料 100%全检，产线辅助",
       stopCondition: "3天内无再次发生 + 连续3批次合格",
       observeCycle: "每3个工作日抽检1次",
       closeCondition: "连续3次观察抽检合格",
@@ -49,7 +49,7 @@
       risk: "物流/运输/包装导致的问题",
       typical: "包装破损、磕碰、挤压变形等偏差",
       cycle: "1个工作日",
-      method: "IQC 100%全检，产线辅助",
+      method: "来料 100%全检，产线辅助",
       stopCondition: "3天内无再次发生 + 连续3批次合格",
       observeCycle: "每1个工作日抽检1次",
       closeCondition: "连续3次观察抽检合格",
@@ -71,8 +71,7 @@
         endDate: addWorkdays(today(), 1),
         stage: status.fullCheck,
         paused: "否",
-        concession: "否",
-        owner: "QA",
+        owner: "来料",
         note: "示例任务，可直接编辑或删除。",
       },
     ],
@@ -88,8 +87,36 @@
         sameIssue: "否",
         result: "合格",
         action: "放行",
-        inspector: "IQC",
+        inspector: "来料",
         defectDesc: "",
+      },
+    ],
+    incomingItems: [
+      {
+        id: "INSP-ITEM-001",
+        partNumber: "DIFF-HOUSING-001",
+        partName: "Diff壳体",
+        supplier: "示例供应商A",
+        inspectionContent: "Q状态到货后核对外观磕碰和包装状态",
+        ownerDepartment: "来料",
+        status: "启用",
+        note: "示例进料检验项目，可直接编辑或删除。",
+      },
+    ],
+    incomingBatches: [
+      {
+        id: "INSP-BATCH-001",
+        itemId: "INSP-ITEM-001",
+        arrivalDate: today(),
+        huNo: "HU-0001",
+        qty: 120,
+        location: "待检区",
+        inspector: "",
+        inspectionDate: "",
+        result: "待检",
+        defectDesc: "",
+        action: "",
+        note: "",
       },
     ],
   };
@@ -113,6 +140,7 @@
     daily: "筛选工作台",
     dashboard: "看板",
     tasks: "筛选项目管理",
+    incoming: "进料检验",
     rules: "周期规则",
     settings: "数据管理",
   };
@@ -129,17 +157,16 @@
       ["closeCondition", "关闭条件", "textarea", "full"],
     ],
     task: [
-      ["source", "异常来源", "select", "", ["产线异常", "IQC异常", "客户投诉", "供应商通知", "工程变更"]],
+      ["source", "异常来源", "select", "", ["产线异常", "来料异常", "客户投诉", "供应商通知", "工程变更"]],
       ["level", "风险等级", "select", "", () => state.rules.map((rule) => rule.level)],
-      ["materialCode", "物料编码", "text"],
+      ["materialCode", "零件号", "text"],
       ["materialName", "物料名称", "text"],
       ["supplier", "供应商", "text"],
       ["startDate", "启动日期", "date"],
       ["endDate", "结束日期", "date"],
       ["stage", "当前阶段", "select", "", [status.fullCheck, status.observe, status.paused, status.closed]],
       ["paused", "来料中断", "select", "", ["否", "是"]],
-      ["concession", "是否特采", "select", "", ["否", "是"]],
-      ["owner", "责任人", "text"],
+      ["owner", "责任部门", "text"],
       ["screeningContent", "筛选内容", "textarea", "full"],
       ["note", "备注", "textarea", "full"],
     ],
@@ -155,6 +182,28 @@
       ["action", "处理方式", "select", "", ["放行", "冻结", "退货", "特采", "重工", "待判定"]],
       ["inspector", "检验员", "text"],
       ["defectDesc", "不良现象", "textarea", "full"],
+    ],
+    incomingItem: [
+      ["partNumber", "零件号", "text"],
+      ["partName", "物料名称", "text"],
+      ["supplier", "供应商", "text"],
+      ["ownerDepartment", "责任部门", "text"],
+      ["status", "状态", "select", "", ["启用", "关闭"]],
+      ["inspectionContent", "检验内容", "textarea", "full"],
+      ["note", "备注", "textarea", "full"],
+    ],
+    incomingBatch: [
+      ["itemId", "Q状态项目", "select", "", () => state.incomingItems.map((item) => [item.id, `${item.partNumber} · ${item.supplier}`])],
+      ["arrivalDate", "到货日期", "date"],
+      ["huNo", "HU号", "textarea", "full"],
+      ["qty", "到货数量", "number"],
+      ["location", "仓库/库位", "text"],
+      ["inspector", "检验员", "text"],
+      ["inspectionDate", "检验日期", "date"],
+      ["result", "检验结果", "select", "", ["待检", "合格", "不合格", "待判定"]],
+      ["action", "处理方式", "select", "", ["", "放行", "冻结", "退货", "特采", "待判定"]],
+      ["defectDesc", "异常说明", "textarea", "full"],
+      ["note", "备注", "textarea", "full"],
     ],
   };
 
@@ -195,6 +244,9 @@
     byId("recordExcelInput").addEventListener("change", (event) => importTableFile(event, "record"));
     byId("taskTemplateBtn").addEventListener("click", () => downloadTemplate("task"));
     byId("recordTemplateBtn").addEventListener("click", () => downloadTemplate("record"));
+    byId("incomingItemAddBtn").addEventListener("click", () => openEditor("incomingItem"));
+    byId("incomingBatchAddBtn").addEventListener("click", () => openEditor("incomingBatch"));
+    byId("incomingSearchInput").addEventListener("input", renderIncomingInspection);
     byId("clearFiltersBtn").addEventListener("click", clearFilters);
     byId("taskSearchInput").addEventListener("input", (event) => updateFilter("search", event.target.value));
     byId("levelFilter").addEventListener("change", (event) => updateFilter("level", event.target.value));
@@ -217,6 +269,7 @@
     renderDaily();
     renderDashboard();
     renderTasks();
+    renderIncomingInspection();
     renderDailySummary();
     renderRules();
     renderDataStatus();
@@ -322,7 +375,7 @@
       taskId,
       batch: `DAILY-${dailyDate}`,
       screeningDate: dailyDate,
-      inspector: "IQC",
+      inspector: "来料",
       defectDesc: "每日筛选记录",
     };
     record.stage = task.stage === status.observe ? "观察抽检" : "全检";
@@ -488,6 +541,115 @@
       : `<tr><td colspan="8" class="empty">暂无已关闭筛选任务。</td></tr>`;
   }
 
+  function renderIncomingInspection() {
+    const query = (byId("incomingSearchInput")?.value || "").trim().toLowerCase();
+    const itemRows = state.incomingItems.filter((item) => incomingItemSearchText(item).includes(query));
+    const batchRows = state.incomingBatches
+      .map(incomingBatchSummary)
+      .filter((batch) => incomingBatchSearchText(batch).includes(query))
+      .sort((a, b) => String(b.arrivalDate).localeCompare(String(a.arrivalDate)));
+    const pendingRows = batchRows.filter((batch) => batch.pending);
+    const doneRows = batchRows.filter((batch) => !batch.pending);
+
+    byId("incomingMetricItems").textContent = formatNumber(state.incomingItems.filter((item) => item.status !== "关闭").length);
+    byId("incomingMetricPending").textContent = formatNumber(pendingRows.length);
+    byId("incomingMetricOverdue").textContent = formatNumber(pendingRows.filter((batch) => batch.overdue).length);
+    byId("incomingMetricDone").textContent = formatNumber(doneRows.length);
+
+    byId("incomingPendingRows").innerHTML = pendingRows.length
+      ? pendingRows.map(incomingPendingRow).join("")
+      : `<tr><td colspan="8" class="empty">暂无待检HU。记录到货HU后，未完成检验的批次会自动显示在这里。</td></tr>`;
+    byId("incomingItemRows").innerHTML = itemRows.length
+      ? itemRows.map(incomingItemRow).join("")
+      : `<tr><td colspan="7" class="empty">暂无Q状态物料，点击“新增Q状态项目”开始。</td></tr>`;
+    byId("incomingDoneRows").innerHTML = doneRows.length
+      ? doneRows.map(incomingDoneRow).join("")
+      : `<tr><td colspan="8" class="empty">暂无已检记录。</td></tr>`;
+  }
+
+  function incomingItemRow(item) {
+    return `
+      <tr>
+        <td>${badgeText(item.status || "启用", item.status === "关闭" ? "closed" : "observe")}</td>
+        <td>${escapeHtml(item.partNumber)}</td>
+        <td>${escapeHtml(item.partName)}</td>
+        <td>${escapeHtml(item.supplier)}</td>
+        <td>${escapeHtml(item.inspectionContent || "")}</td>
+        <td>${escapeHtml(item.ownerDepartment || "")}</td>
+        <td>${rowActions("incomingItem", item.id)}</td>
+      </tr>
+    `;
+  }
+
+  function incomingPendingRow(batch) {
+    return `
+      <tr class="${batch.overdue ? "overdue-row" : ""}">
+        <td>${badgeText(batch.overdue ? "超期未检" : "待检", batch.overdue ? "overdue" : "paused")}</td>
+        <td>${escapeHtml(batch.arrivalDate)}</td>
+        <td>${formatHu(batch.huNo)}</td>
+        <td>${escapeHtml(batch.item?.partNumber || "未匹配")}</td>
+        <td>${escapeHtml(batch.item?.supplier || "")}</td>
+        <td>${formatNumber(batch.qty)}</td>
+        <td>${escapeHtml(batch.item?.inspectionContent || "")}</td>
+        <td>${rowActions("incomingBatch", batch.id)}</td>
+      </tr>
+    `;
+  }
+
+  function incomingDoneRow(batch) {
+    return `
+      <tr>
+        <td>${escapeHtml(batch.inspectionDate || batch.arrivalDate)}</td>
+        <td>${formatHu(batch.huNo)}</td>
+        <td>${escapeHtml(batch.item?.partNumber || "未匹配")}</td>
+        <td>${escapeHtml(batch.item?.supplier || "")}</td>
+        <td>${formatNumber(batch.qty)}</td>
+        <td>${resultBadge(batch.result)}</td>
+        <td>${escapeHtml(batch.inspector || "")}</td>
+        <td>${rowActions("incomingBatch", batch.id)}</td>
+      </tr>
+    `;
+  }
+
+  function incomingBatchSummary(batch) {
+    const item = state.incomingItems.find((entry) => entry.id === batch.itemId);
+    const pending = !batch.result || batch.result === "待检";
+    return {
+      ...batch,
+      item,
+      pending,
+      overdue: pending && normalizeDate(batch.arrivalDate) < today(),
+    };
+  }
+
+  function incomingItemSearchText(item) {
+    return [item.id, item.partNumber, item.partName, item.supplier, item.inspectionContent, item.ownerDepartment, item.status, item.note]
+      .join(" ")
+      .toLowerCase();
+  }
+
+  function incomingBatchSearchText(batch) {
+    return [
+      batch.id,
+      batch.huNo,
+      batch.arrivalDate,
+      batch.location,
+      batch.inspector,
+      batch.result,
+      batch.defectDesc,
+      batch.item?.partNumber,
+      batch.item?.partName,
+      batch.item?.supplier,
+      batch.item?.inspectionContent,
+    ]
+      .join(" ")
+      .toLowerCase();
+  }
+
+  function formatHu(value) {
+    return escapeHtml(String(value || "").split(/[\n,，]+/).map((item) => item.trim()).filter(Boolean).join(" / "));
+  }
+
   function taskRow(task, includeStage) {
     const content = task.screeningContent || task.issue || "";
     const stageColumn = includeStage ? `<td>${stageBadge(task.stage)}</td>` : "";
@@ -580,6 +742,8 @@
         规则数: state.rules.length,
         任务数: state.tasks.length,
         记录数: state.records.length,
+        进料检验项目数: state.incomingItems.length,
+        到货HU记录数: state.incomingBatches.length,
         保存位置: isServerMode() ? "服务器 SQLite 共享数据库 + 浏览器本地备份" : "当前浏览器本地存储",
         最近操作: message || "无",
       },
@@ -645,7 +809,13 @@
         <div class="field${fullClass}">
           <label for="${name}">${label}</label>
           <select id="${name}" name="${name}">
-            ${values.map((option) => `<option value="${escapeAttr(option)}" ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+            ${values
+              .map((option) => {
+                const optionValue = Array.isArray(option) ? option[0] : option;
+                const optionLabel = Array.isArray(option) ? option[1] : option;
+                return `<option value="${escapeAttr(optionValue)}" ${optionValue === value ? "selected" : ""}>${escapeHtml(optionLabel)}</option>`;
+              })
+              .join("")}
           </select>
         </div>
       `;
@@ -681,6 +851,9 @@
     if (editing.type === "record") {
       applyRecordResult(item);
     }
+    if (editing.type === "incomingBatch" && item.result && item.result !== "待检" && !item.inspectionDate) {
+      item.inspectionDate = today();
+    }
 
     saveState();
     byId("editorDialog").close();
@@ -695,7 +868,7 @@
         risk: "",
         typical: "",
         cycle: "",
-        method: "IQC 100%全检",
+        method: "来料 100%全检",
         stopCondition: "周期满足 + 连续3批次合格",
         observeCycle: "每个原周期抽检1次",
         closeCondition: "连续3次观察抽检合格",
@@ -713,8 +886,36 @@
         sameIssue: "否",
         result: "合格",
         action: "放行",
-        inspector: "IQC",
+        inspector: "来料",
         defectDesc: "",
+      };
+    }
+    if (type === "incomingItem") {
+      return {
+        id: `INSP-ITEM-${Date.now()}`,
+        partNumber: "",
+        partName: "",
+        supplier: "",
+        inspectionContent: "",
+        ownerDepartment: "来料",
+        status: "启用",
+        note: "",
+      };
+    }
+    if (type === "incomingBatch") {
+      return {
+        id: `INSP-BATCH-${Date.now()}`,
+        itemId: state.incomingItems[0]?.id || "",
+        arrivalDate: today(),
+        huNo: "",
+        qty: 0,
+        location: "",
+        inspector: "",
+        inspectionDate: "",
+        result: "待检",
+        defectDesc: "",
+        action: "",
+        note: "",
       };
     }
     const level = state.rules[0]?.level || "Level 1";
@@ -731,8 +932,7 @@
       endDate: calculateEndDate(startDate, level),
       stage: status.fullCheck,
       paused: "否",
-      concession: "否",
-      owner: "QA",
+      owner: "来料",
       note: "",
     };
   }
@@ -847,7 +1047,7 @@
       const task = {
         id,
         source: valueByHeaders(row, ["异常来源", "来源"]) || "产线异常",
-        materialCode: valueByHeaders(row, ["物料编码", "物料号", "料号"]) || "",
+        materialCode: valueByHeaders(row, ["零件号", "物料编码", "物料号", "料号"]) || "",
         materialName: valueByHeaders(row, ["物料名称", "品名"]) || "",
         supplier: valueByHeaders(row, ["供应商", "供应商名称"]) || "",
         screeningContent: valueByHeaders(row, ["筛选内容", "异常描述", "问题描述"]) || "",
@@ -856,8 +1056,7 @@
         endDate: normalizeDate(valueByHeaders(row, ["结束日期", "预计结束日期", "EndDate"])) || calculateEndDate(startDate, level),
         stage: normalizeTaskStage(valueByHeaders(row, ["当前阶段", "阶段", "状态"])) || status.fullCheck,
         paused: normalizeYesNo(valueByHeaders(row, ["来料中断", "是否中断"])) || "否",
-        concession: normalizeYesNo(valueByHeaders(row, ["是否特采", "特采"])) || "否",
-        owner: valueByHeaders(row, ["责任人", "执行方", "Owner"]) || "QA",
+        owner: valueByHeaders(row, ["责任部门", "责任人", "执行方", "Owner"]) || "来料",
         note: valueByHeaders(row, ["备注", "说明"]) || "",
       };
       upsertById(state.tasks, task);
@@ -885,7 +1084,7 @@
         sameIssue: normalizeYesNo(valueByHeaders(row, ["是否同类不良", "同类不良"])) || "否",
         result: normalizeResult(valueByHeaders(row, ["判定结果", "判定", "结果"])) || "合格",
         action: valueByHeaders(row, ["处理方式", "处置方式"]) || "放行",
-        inspector: valueByHeaders(row, ["检验员", "筛选人"]) || "IQC",
+        inspector: valueByHeaders(row, ["检验员", "筛选人"]) || "来料",
         defectDesc: valueByHeaders(row, ["不良现象", "缺陷描述", "备注"]) || "",
       };
       upsertById(state.records, record);
@@ -1105,8 +1304,8 @@
         startDate: normalizeDate(task.startDate) || today(),
         stage: normalizeTaskStage(task.stage) || status.fullCheck,
         paused: normalizeYesNo(task.paused) || "否",
-        concession: normalizeYesNo(task.concession) || "否",
       };
+      delete normalized.concession;
       normalized.endDate = normalizeDate(task.endDate) || calculateEndDateWithRules(normalized.startDate, normalized.level, clean.rules);
       delete normalized.issue;
       return normalized;
@@ -1119,6 +1318,21 @@
       defectQty: toNumber(record.defectQty),
       sameIssue: normalizeYesNo(record.sameIssue) || "否",
       result: normalizeResult(record.result) || "合格",
+    }));
+    clean.incomingItems = (clean.incomingItems || []).map((item) => ({
+      ...item,
+      partNumber: item.partNumber || item.materialCode || "",
+      partName: item.partName || item.materialName || "",
+      ownerDepartment: item.ownerDepartment || item.owner || "来料",
+      status: item.status === "关闭" ? "关闭" : "启用",
+      inspectionContent: item.inspectionContent || "",
+    }));
+    clean.incomingBatches = (clean.incomingBatches || []).map((batch) => ({
+      ...batch,
+      arrivalDate: normalizeDate(batch.arrivalDate) || today(),
+      inspectionDate: normalizeDate(batch.inspectionDate),
+      qty: toNumber(batch.qty),
+      result: normalizeInspectionResult(batch.result) || "待检",
     }));
     return clean;
   }
@@ -1147,6 +1361,16 @@
     if (text.includes("待")) return "待判定";
     if (text) return "合格";
     return "";
+  }
+
+  function normalizeInspectionResult(value) {
+    const text = String(value || "").trim();
+    if (!text) return "";
+    if (text.includes("不") || text.toLowerCase() === "ng") return "不合格";
+    if (text.includes("待判")) return "待判定";
+    if (text.includes("合格") || text.toLowerCase() === "ok") return "合格";
+    if (text.includes("待检")) return "待检";
+    return text;
   }
 
   function normalizeYesNo(value) {
@@ -1207,6 +1431,9 @@
     if (type === "task") {
       state.records = state.records.filter((record) => record.taskId !== id);
     }
+    if (type === "incomingItem") {
+      state.incomingBatches = state.incomingBatches.filter((batch) => batch.itemId !== id);
+    }
     saveState();
     render();
   }
@@ -1238,7 +1465,7 @@
       <div class="detail-section">
         <h4>基本信息</h4>
         <div class="detail-grid">
-          ${detailItem("物料编码", task.materialCode)}
+          ${detailItem("零件号", task.materialCode)}
           ${detailItem("物料名称", task.materialName)}
           ${detailItem("供应商", task.supplier)}
           ${detailItem("异常来源", task.source)}
@@ -1246,7 +1473,7 @@
           ${detailHtmlItem("当前阶段", stageBadge(task.stage))}
           ${detailItem("启动日期", task.startDate)}
           ${detailHtmlItem("结束日期", task.overdue ? `${escapeHtml(task.endDate)} ${badgeText("超期", "overdue")}` : escapeHtml(task.endDate || "待确认"))}
-          ${detailItem("责任人", task.owner)}
+          ${detailItem("责任部门", task.owner)}
         </div>
       </div>
       <div class="detail-section">
@@ -1398,12 +1625,12 @@
   function downloadTemplate(type) {
     const headers =
       type === "task"
-        ? ["任务单号", "异常来源", "物料编码", "物料名称", "供应商", "筛选内容", "风险等级", "启动日期", "结束日期", "当前阶段", "责任人", "备注"]
+        ? ["任务单号", "异常来源", "零件号", "物料名称", "供应商", "筛选内容", "风险等级", "启动日期", "结束日期", "当前阶段", "责任部门", "备注"]
         : ["任务单号", "来料批次", "筛选阶段", "筛选日期", "筛选数量", "不良数量", "是否同类不良", "判定结果", "处理方式", "检验员", "不良现象"];
     const example =
       type === "task"
-        ? ["SCR-20260629-001", "产线异常", "MAT-001", "示例物料", "示例供应商", "外观磕碰筛选", "Level 4", today(), "", "全检中", "QA", "示例行，可删除"]
-        : ["SCR-20260629-001", "LOT-001", "全检", today(), "100", "0", "否", "合格", "放行", "IQC", ""];
+        ? ["SCR-20260629-001", "产线异常", "MAT-001", "示例物料", "示例供应商", "外观磕碰筛选", "Level 4", today(), "", "全检中", "来料", "示例行，可删除"]
+        : ["SCR-20260629-001", "LOT-001", "全检", today(), "100", "0", "否", "合格", "放行", "来料", ""];
     const csv = [headers, example].map((row) => row.map(csvCell).join(",")).join("\r\n");
     const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -1591,11 +1818,11 @@
   }
 
   function collectionName(type) {
-    return { rule: "rules", task: "tasks", record: "records" }[type];
+    return { rule: "rules", task: "tasks", record: "records", incomingItem: "incomingItems", incomingBatch: "incomingBatches" }[type];
   }
 
   function typeName(type) {
-    return { rule: "规则", task: "任务", record: "记录" }[type];
+    return { rule: "规则", task: "任务", record: "记录", incomingItem: "Q状态项目", incomingBatch: "到货HU记录" }[type];
   }
 
   function byId(id) {

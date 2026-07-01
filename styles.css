@@ -276,6 +276,8 @@ textarea {
   display: flex;
   align-items: end;
   min-height: 64px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .section-heading {
@@ -620,7 +622,7 @@ dialog::backdrop {
   }
 
   .nav {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .nav-item {

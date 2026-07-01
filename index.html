@@ -13,7 +13,7 @@
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand">
-          <div class="brand-mark">IQC</div>
+          <div class="brand-mark">来料</div>
           <div>
             <h1>来料筛选周期管理</h1>
             <p>异常触发 · 全检 · 观察 · 关闭</p>
@@ -23,6 +23,7 @@
           <button class="nav-item active" data-view="daily">筛选工作台</button>
           <button class="nav-item" data-view="dashboard">看板</button>
           <button class="nav-item" data-view="tasks">筛选项目管理</button>
+          <button class="nav-item" data-view="incoming">进料检验</button>
           <button class="nav-item" data-view="rules">周期规则</button>
           <button class="nav-item" data-view="settings">数据</button>
         </nav>
@@ -31,7 +32,7 @@
       <main class="main">
         <header class="topbar">
           <div>
-            <p class="eyebrow">Incoming Quality Control</p>
+            <p class="eyebrow">Incoming Material Control</p>
             <h2 id="viewTitle">筛选工作台</h2>
           </div>
           <div class="toolbar">
@@ -152,7 +153,7 @@
             <div class="project-search-panel">
               <div class="field">
                 <label for="dashboardProjectSearch">搜索项目</label>
-                <input id="dashboardProjectSearch" type="search" placeholder="任务单号 / 物料编码 / 供应商 / 筛选内容" />
+                <input id="dashboardProjectSearch" type="search" placeholder="任务单号 / 零件号 / 供应商 / 筛选内容" />
               </div>
               <div id="projectSearchResults" class="project-results"></div>
               <div id="projectStats" class="project-stats"></div>
@@ -241,7 +242,7 @@
                     <tr>
                       <th>任务单号</th>
                       <th>异常来源</th>
-                      <th>物料编码</th>
+                      <th>零件号</th>
                       <th>筛选内容</th>
                       <th>等级</th>
                       <th>阶段</th>
@@ -268,7 +269,7 @@
                     <tr>
                       <th>任务单号</th>
                       <th>异常来源</th>
-                      <th>物料编码</th>
+                      <th>零件号</th>
                       <th>筛选内容</th>
                       <th>等级</th>
                       <th>启动日期</th>
@@ -281,6 +282,117 @@
               </div>
             </div>
 
+          </div>
+        </section>
+
+        <section class="view" id="incomingView">
+          <div class="metric-grid">
+            <div class="metric">
+              <span>Q状态项目</span>
+              <strong id="incomingMetricItems">0</strong>
+            </div>
+            <div class="metric">
+              <span>待检HU批次</span>
+              <strong id="incomingMetricPending">0</strong>
+            </div>
+            <div class="metric alert">
+              <span>超期未检</span>
+              <strong id="incomingMetricOverdue">0</strong>
+            </div>
+            <div class="metric">
+              <span>已检批次</span>
+              <strong id="incomingMetricDone">0</strong>
+            </div>
+          </div>
+
+          <div class="section-band filter-band">
+            <div class="filter-grid">
+              <div class="field">
+                <label for="incomingSearchInput">查找进料项目</label>
+                <input id="incomingSearchInput" type="search" placeholder="零件号 / 物料名称 / 供应商 / HU号 / 检验内容" />
+              </div>
+              <div class="filter-actions">
+                <button class="button primary" id="incomingItemAddBtn">新增Q状态项目</button>
+                <button class="button secondary" id="incomingBatchAddBtn">记录到货HU</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-band">
+            <div class="section-heading">
+              <div>
+                <h3>待检提醒</h3>
+                <p>已记录到货HU但尚未填写检验结果的批次会留在这里；超过到货日仍未完成会提示超期。</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>状态</th>
+                    <th>到货日期</th>
+                    <th>HU号</th>
+                    <th>零件号</th>
+                    <th>供应商</th>
+                    <th>数量</th>
+                    <th>检验内容</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="incomingPendingRows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="section-band">
+            <div class="section-heading">
+              <div>
+                <h3>Q状态物料清单</h3>
+                <p>维护需要进料检验的Q状态物料，后续每批到货时记录HU号并完成检验。</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>状态</th>
+                    <th>零件号</th>
+                    <th>物料名称</th>
+                    <th>供应商</th>
+                    <th>检验内容</th>
+                    <th>责任部门</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="incomingItemRows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="section-band">
+            <div class="section-heading">
+              <div>
+                <h3>已检记录</h3>
+                <p>已填写检验结果的HU批次会自动进入这里，便于追溯每批进料检验情况。</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>检验日期</th>
+                    <th>HU号</th>
+                    <th>零件号</th>
+                    <th>供应商</th>
+                    <th>数量</th>
+                    <th>结果</th>
+                    <th>检验员</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="incomingDoneRows"></tbody>
+              </table>
+            </div>
           </div>
         </section>
 
@@ -341,7 +453,7 @@
               <button class="button warning" id="resetBtn">恢复示例数据</button>
             </div>
             <p class="import-hint">
-              任务导入建议表头：任务单号、异常来源、物料编码、物料名称、供应商、筛选内容、风险等级、启动日期、结束日期、当前阶段、责任人、备注。
+              任务导入建议表头：任务单号、异常来源、零件号、物料名称、供应商、筛选内容、风险等级、启动日期、结束日期、当前阶段、责任部门、备注。
               记录导入建议表头：任务单号、来料批次、筛选阶段、筛选日期、筛选数量、不良数量、是否同类不良、判定结果、处理方式、检验员、不良现象。
             </p>
             <pre class="status-box" id="dataStatus"></pre>
